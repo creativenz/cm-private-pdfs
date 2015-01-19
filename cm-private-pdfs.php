@@ -25,40 +25,82 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+class PrivatePdfsSettings {
+	
+	/**
+     * Holds the values to be used in the fields callbacks
+     */
+	private $options;
+	
+	/**
+     * Start up
+     */
+	public function __construct() {
+	  add_action( 'admin_menu', array( $this, 'cmpp_setup_menu' ) );
+	  add_action( 'admin_init', array( $this, 'register_cmpp_settings' ) );
+	}
+	
+	/**
+     * Add options page
+     */
+	public function cmpp_setup_menu() {
+		add_submenu_page( 'options-general.php', 'Private PDFs Settings', 'Private PDFs', 'manage_options', 'cmpp', 'cmpp_settings' );
+	}
+	
+	/**
+     * Options page callback
+     */
+	public function cmpp_settings() {
+		// Set class property
+        $this->options = get_option( 'cmpp_name' );
+        ?>
+		<div class="wrap">
+			<h2>Private PDFs Settings</h2>
+			<form method="post" action="options.php">
+		<?php
+			settings_fields( 'cmpp-group' );
+			do_settings_sections( 'cmpp-group' );
+			submit_button();
+		?>
+			</form>
+		</div>
+        <?php
+	}
+	
+	/**
+     * Register and add settings
+     */
+	public function register_cmpp_settings() {
+		register_setting( 'cmpp-group', 'cmpp_name', array( $this, 'sanitise' ) );
+		
+		add_settings_field( 'secure_folder_name', 'Secure Folder Name', array( $this, 'name_callback' ), 'cmpp' );
+	}
+	
+	/**
+     * Sanitize each setting field as needed
+     *
+     * @param array $input Contains all settings fields as array keys
+     */
+    public function sanitise( $input ) {
+        $new_input = array();
 
-if ( is_admin() ){ // admin actions
-  add_action( 'admin_menu', 'cmpp_setup_menu' );
-  add_action( 'admin_init', 'register_cmpp_settings' );
-} else {
-  // non-admin enqueues, actions, and filters
+        if( isset( $input['secure_folder_name'] ) )
+            $new_input['secure_folder_name'] = sanitize_text_field( $input['secure_folder_name'] );
+
+        return $new_input;
+    }
+	
+	/** 
+     * Get the settings option array and print one of its values
+     */
+    public function name_callback()
+    {
+        printf(
+            '<input type="text" id="title" name="cmpp_name[secure_folder_name]" value="%s" />',
+            isset( $this->options['secure_folder_name'] ) ? esc_attr( $this->options['secure_folder_name']) : ''
+        );
+    }
 }
 
-
-function cmpp_setup_menu() {
-	add_submenu_page( 'options-general.php', 'Private PDFs Settings', 'Private PDFs', 'manage_options', 'cmpp', 'cmpp_settings' );
-}
-
-function cmpp_settings() {
-	echo '<div class="wrap">';
-	echo '<h2>Private PDFs Settings</h2>';
-	echo '<form method="post" action="options.php">';
-	
-	settings_fields( 'cmpp-group' );
-	
-	do_settings_sections( 'cmpp-group' );
-	
-	echo '<table class="form-table">';
-		echo '<tr valign="top">';
-			echo '<th scope="row">Secure Folder Name</th>';
-			echo '<td><input type="test" name="secure_folder_name" value="'. esc_attr( get_option( 'secure_folder_name' ) ) .'" /></td>';
-		echo '</tr>';
-	echo '</table>';
-	
-	submit_button();
-	echo '</form>';
-	echo '</div>';
-}
-
-function register_cmpp_settings() {
-	register_setting( 'cmpp-group', 'secure_folder_name' );
-}
+if( is_admin() )
+    $my_settings_page = new PrivatePdfsSettings();
